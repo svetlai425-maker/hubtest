@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Тест связи</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+  .error { color: #c00; }
+  li { padding: 6px 0; border-bottom: 1px dotted #ccc; }
+</style>
+</head>
+<body>
+<h1>Тест связи: Таблица → Страница</h1>
+<div id="status">Загружаю…</div>
+<ul id="list"></ul>
+
+<script>
+// ====== ЕДИНСТВЕННОЕ МЕСТО ДЛЯ ПРАВОК ======
+const SHEET_ID = "18xrdJA4zo8oFmb82tBSIt7AYnKWrDEFUXdknBXjrM8Q";
+const SHEET_NAME = "Товары";
+// ===========================================
+
+const url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+            "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(SHEET_NAME);
+
+const status = document.getElementById("status");
+const list = document.getElementById("list");
+
+fetch(url)
+  .then(r => {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  })
+  .then(csv => {
+    // режем текст на строки и колонки
+    const rows = csv.trim().split("\n").map(line => line.split(","));
+    const header = rows[0];
+    // ищем колонки по именам, а не по номерам —
+    // поэтому порядок колонок в Таблице менять можно свободно
+    const iName = header.indexOf("name");
+    const iPrice = header.indexOf("price");
+    const iActive = header.indexOf("active");
+
+    let shown = 0;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][iActive] && rows[i][iActive].toLowerCase() === "да") {
+        const li = document.createElement("li");
+        li.textContent = rows[i][iName] + " — " + rows[i][iPrice] + " ₽";
+        list.appendChild(li);
+        shown++;
+      }
+    }
+    status.textContent = shown
+      ? "Связь есть! Показано товаров: " + shown
+      : "Связь есть, но товаров с active=да не найдено.";
+  })
+  .catch(e => {
+    status.innerHTML = '<span class="error">ОШИБКА: ' + e.message +
+      '<br>Если написано «Failed to fetch» — проверьте доступ к таблице (Шаг 3).</span>';
+  });
+</script>
+</body>
+</html>
